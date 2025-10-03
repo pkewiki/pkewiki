@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <meta
+      http-equiv="Cache-Control"
+      content="no-cache, no-store, must-revalidate"
+    />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" />
+
+    <title>PK Echoes - Wiki</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <!-- Header -->
+    <header class="wiki-header">
+      <div class="container">
+        <div class="header-content">
+          <div class="logo-section">
+            <h1 class="game-title">PK Echoes</h1>
+            <span class="wiki-subtitle">Item Wiki</span>
+            <br />
+          </div>
+          <div
+            class="search-section"
+            style="flex: 1; display: flex; align-items: center; width: 100%"
+          >
+            <div class="search-container" style="width: 100%; display: flex">
+              <input
+                type="text"
+                id="global-search"
+                placeholder="Search Items (e.g., robe, orb, chest, dagger, dragon)..."
+                class="search-input"
+              />
+              <button class="search-btn" id="search-btn">
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
+                  <circle cx="11" cy="11" r="8"></circle>
+                  <path d="m21 21-4.35-4.35"></path>
+                </svg>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </header>
+    <br />
+
+    <!-- Main Content -->
+    <main class="main-content">
+      <!-- Items Section -->
+      <section class="items-section">
+        <div class="container">
+          <div class="page-header">
+            <h1>Item Database</h1>
+            <div class="page-controls">
+              <div class="filter-toggle">
+                <button class="btn btn--outline" id="advanced-filters-toggle">
+                  Advanced Filters
+                </button>
+              </div>
+              <div class="sort-controls">
+                <label for="sort-select">Sort by:</label>
+                <select id="sort-select" class="form-control">
+                  <option value="name">Name</option>
+                  <option value="rarity">Rarity</option>
+                  <option value="level">Level</option>
+                  <option value="value">Value</option>
+                  <option value="damage">Damage</option>
+                  <option value="enhancementLevel">Enhancement</option>
+                </select>
+                <button
+                  id="sort-order-toggle"
+                  class="btn btn--outline"
+                  style="margin-left: 8px"
+                >
+                  <span id="sort-order-text">↑Asc </span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div class="advanced-filters" id="advanced-filters">
+            <div class="filter-section">
+              <h3>Advanced Filters</h3>
+              <div class="filter-grid">
+                <div class="filter-group">
+                  <h4>Type</h4>
+                  <div class="range-inputs">
+                    <select id="filter-type" class="form-control">
+                      <option value="">Any</option>
+                    </select>
+                  </div>
+                </div>
+                <div class="filter-group">
+                  <h4>Stats Range</h4>
+                  <div class="range-inputs">
+                    <input
+                      type="number"
+                      id="min-damage"
+                      placeholder="Min Damage"
+                      class="form-control"
+                    />
+                    <input
+                      type="number"
+                      id="max-damage"
+                      placeholder="Max Damage"
+                      class="form-control"
+                    />
+                  </div>
+                </div>
+                <div class="filter-group">
+                  <h4>Requirements</h4>
+                  <div class="range-inputs">
+                    <input
+                      type="number"
+                      id="min-level"
+                      placeholder="Min Level"
+                      class="form-control"
+                    />
+                    <input
+                      type="number"
+                      id="max-level"
+                      placeholder="Max Level"
+                      class="form-control"
+                    />
+                  </div>
+                </div>
+                <div class="filter-group">
+                  <h4>Base Stats</h4>
+                  <div class="range-inputs">
+                    <select id="filter-baseStat-key" class="form-control">
+                      <option value="">Any</option>
+                    </select>
+                    <input
+                      type="number"
+                      id="filter-baseStat-value"
+                      placeholder="Value"
+                      class="form-control"
+                    />
+                  </div>
+                </div>
+                <div class="filter-group">
+                  <h4>Stats</h4>
+                  <div class="range-inputs">
+                    <select id="filter-stat-key" class="form-control">
+                      <option value="">Any</option>
+                    </select>
+                    <input
+                      type="number"
+                      id="filter-stat-value"
+                      placeholder="Value"
+                      class="form-control"
+                    />
+                  </div>
+                </div>
+                <div class="filter-group">
+                  <h4>Features</h4>
+                  <div class="checkbox-group">
+                    <label class="filter-checkbox">
+                      <input type="checkbox" id="has-effects" /> Has Effects
+                    </label>
+                    <label class="filter-checkbox">
+                      <input type="checkbox" id="is-craftable" /> Craftable
+                    </label>
+                    <label class="filter-checkbox">
+                      <input type="checkbox" id="has-recipe" /> Has Recipe
+                    </label>
+                  </div>
+                </div>
+                <div class="filter-group">
+                  <h4>Recipe</h4>
+                  <div class="range-inputs">
+                    <select id="filter-recipe-key" class="form-control">
+                      <option value="">Any</option>
+                      <option value="skillRequired">Skill Required</option>
+                      <option value="skillLevel">Skill Level</option>
+                      <option value="materials.itemId">Material Item ID</option>
+                    </select>
+                    <input
+                      id="filter-recipe-value"
+                      placeholder="Value"
+                      class="form-control"
+                    />
+                  </div>
+                </div>
+              </div>
+              <div class="filter-actions">
+                <button class="btn btn--secondary" id="clear-filters">
+                  Clear All
+                </button>
+                <button class="btn btn--primary" id="apply-filters">
+                  Apply Filters
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div class="items-content">
+            <!-- Search bar moved to header -->
+            <br />
+            <div class="items-grid" id="items-grid">
+              <!-- Items will be populated by JavaScript -->
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- Item Detail Modal -->
+    <div id="item-modal" class="modal hidden">
+      <div class="modal-overlay"></div>
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2 id="modal-title">Item Details</h2>
+          <button class="modal-close" id="modal-close">&times;</button>
+        </div>
+        <div class="modal-body" id="modal-body">
+          <!-- Item details will be populated by JavaScript -->
+        </div>
+      </div>
+    </div>
+
+    <!-- Back to Top Button -->
+    <button
+      id="back-to-top"
+      style="
+        position: fixed;
+        bottom: 32px;
+        right: 32px;
+        z-index: 1000;
+        display: none;
+        padding: 12px 18px;
+        font-size: 1.2em;
+        border-radius: 50%;
+        background: #222;
+        color: #fff;
+        border: none;
+        box-shadow: 0 2px 8px rgba(221, 203, 203, 0.2);
+        cursor: pointer;
+      "
+    >
+      ↑
+    </button>
+
+    <script src="app.js"></script>
+    <script>
+      // Show/hide back-to-top button
+      const backToTop = document.getElementById("back-to-top");
+      window.addEventListener("scroll", () => {
+        if (window.scrollY > 300) {
+          backToTop.style.display = "block";
+        } else {
+          backToTop.style.display = "none";
+        }
+      });
+      backToTop.addEventListener("click", () => {
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      });
+    </script>
+  </body>
+</html>
