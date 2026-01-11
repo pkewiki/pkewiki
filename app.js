@@ -79,7 +79,20 @@ class AdvancedGameWiki {
             this.items = this.normalizeItems(data.items || data);
             // Load recipes.json here
             const recipesData = await this.fetchJsonData('data/recipes.json');
-            this.recipes = Array.isArray(recipesData) ? recipesData : (recipesData.knownRecipes || []);
+            // Normalize recipes.json which may contain multiple recipe arrays (starterRecipes, etc.)
+            if (Array.isArray(recipesData)) {
+                this.recipes = recipesData;
+            } else if (recipesData && typeof recipesData === 'object') {
+                // Collect any array values that look like recipes
+                this.recipes = [];
+                Object.values(recipesData).forEach(v => {
+                    if (Array.isArray(v) && v.length && (v[0].recipeId || v[0].recipeId === undefined)) {
+                        this.recipes.push(...v);
+                    }
+                });
+            } else {
+                this.recipes = [];
+            }
             this.buildFilterOptions();
             this.populateFilterControls();
             this.clearAllFilters();
@@ -221,7 +234,7 @@ class AdvancedGameWiki {
     renderHomeSection() {
         const totalItemsEl = document.getElementById('total-items');
         if (totalItemsEl) {
-            totalItemsEl.textContent = this.gameData?.gameInfo?.totalItems || this.items.length || 0;
+            totalItemsEl.textContent = this.gameData?.summary?.totalItems || this.gameData?.gameInfo?.totalItems || this.items.length || 0;
         }
 
         const responseTimeEl = document.getElementById('response-time');
@@ -257,10 +270,34 @@ class AdvancedGameWiki {
             modalBody.innerHTML = this.createDetailedItemView(item);
         }
 
-        // Show modal
+        // Remember the element that had focus so we can restore it
+        this._lastFocusedElement = document.activeElement;
+
+        // Show modal and lock background scrolling
         const modal = document.getElementById('item-modal');
         if (modal) {
             modal.classList.remove('hidden');
+            document.body.classList.add('modal-open');
+            modal.setAttribute('aria-hidden', 'false');
+
+            // Focus the first focusable element inside modal (fallback to close button)
+            const focusable = modal.querySelectorAll('a[href], area[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), button:not([disabled]), [tabindex]:not([tabindex="-1"])');
+            const firstFocusable = focusable && focusable.length ? focusable[0] : modal.querySelector('#modal-close');
+            if (firstFocusable && typeof firstFocusable.focus === 'function') {
+                firstFocusable.focus();
+            }
+
+            // Activate keyboard focus trap
+            this._activateFocusTrap(modal);
+
+            // Clicking outside the modal content (on the overlay or modal background) closes the modal
+            // Use a stable handler reference so it can be removed
+            this._modalClickHandler = (e) => {
+                if (e.target === modal || e.target.classList.contains('modal-overlay')) {
+                    this.closeModal();
+                }
+            };
+            modal.addEventListener('click', this._modalClickHandler);
         }
     }
 
@@ -289,13 +326,16 @@ class AdvancedGameWiki {
     createDetailedItemView(item) {
         return `
             <div class="item-detail-header">
-                <div class="item-icon">⚔️</div>
+                <div class="item-icon"><img src="sprites/${item.cosmetic?.originalSprite?.icon || item.sprite?.icon || ''}" alt="${item.name}" onerror="this.style.display='none'"></div>
                 <div class="item-detail-info">
                     <h1>${item.name}</h1>
                     <div class="item-detail-meta">
                         <span class="item-rarity rarity-${item.rarity}">${item.rarity}</span>
                         <span>Level ${item.level}</span>
                         <span>Type: ${item.type} - Subtype: ${item.subtype ? item.subtype : "none"}</span>
+                        <span>Tier: ${item.tier ?? '—'}</span>
+                        <span>Status: ${item.isActive ? 'Active' : 'Inactive'}</span>
+                        <span>Owner: ${item.ownedBy ?? '—'}</span>
                     </div>
                     <h3>From: </h3>
                     <div class="item-detail-meta">
@@ -303,7 +343,7 @@ class AdvancedGameWiki {
                     </div>
                     
                     <p class="item-detail-description">${item.description}</p>
-                    <span>Stack Size: ${item.maxStack}</span>
+                    <span>Stack Size: ${item.maxStack ?? '—'}</span>
                 </div>
 
             </div>
@@ -321,15 +361,15 @@ class AdvancedGameWiki {
                             </li>
                             <li class="property-item">
                                 <span class="property-label">Strength</span>
-                                <span class="property-value">${item.requirements.strength}</span>   
+                                <span class="property-value">${item.requirements?.strength ?? 0}</span>   
                             </li>
                             <li class="property-item">
                                 <span class="property-label">Agility</span>
-                                <span class="property-value">${item.requirements.agility}</span>   
+                                <span class="property-value">${item.requirements?.agility ?? 0}</span>   
                             </li>
                             <li class="property-item">
                                 <span class="property-label">Intelligence</span>
-                                <span class="property-value">${item.requirements.intelligence}</span>   
+                                <span class="property-value">${item.requirements?.intelligence ?? 0}</span>   
                             </li>
                         </ul>
                         ${this.renderDurabilitySection(item)}
@@ -341,35 +381,35 @@ class AdvancedGameWiki {
                         <ul class="property-list">
                             <li class="property-item">
                                 <span class="property-label">Damage</span>
-                                <span class="property-value">${item.stats.damage}</span>
+                                <span class="property-value">${item.stats?.damage ?? 0}</span>
                             </li>
                             <li class="property-item">
                                 <span class="property-label">Range</span>
-                                <span class="property-value">${item.stats.range}</span>   
+                                <span class="property-value">${item.stats?.range ?? 0}</span>   
                             </li>
                             <li class="property-item">
                                 <span class="property-label">Defense</span>
-                                <span class="property-value">${item.stats.defense}</span>   
+                                <span class="property-value">${item.stats?.defense ?? 0}</span>   
                             </li>
                             <li class="property-item">
                                 <span class="property-label">Health</span>
-                                <span class="property-value">${item.stats.health}</span>   
+                                <span class="property-value">${item.stats?.health ?? 0}</span>   
                             </li>
                             <li class="property-item">
                                 <span class="property-label">Mana</span>
-                                <span class="property-value">${item.stats.mana}</span>   
+                                <span class="property-value">${item.stats?.mana ?? 0}</span>   
                             </li>
                             <li class="property-item">
                                 <span class="property-label">Strength</span>
-                                <span class="property-value">${item.stats.strength}</span>   
+                                <span class="property-value">${item.stats?.strength ?? 0}</span>   
                             </li>
                             <li class="property-item">
                                 <span class="property-label">Agility</span>
-                                <span class="property-value">${item.stats.agility}</span>   
+                                <span class="property-value">${item.stats?.agility ?? 0}</span>   
                             </li>
                             <li class="property-item">
                                 <span class="property-label">Intelligence</span>
-                                <span class="property-value">${item.stats.intelligence}</span>   
+                                <span class="property-value">${item.stats?.intelligence ?? 0}</span>   
                             </li>
                         </ul>
                     </div>
@@ -394,8 +434,10 @@ class AdvancedGameWiki {
             <li class="property-item">
                 <div>
                     <strong>${effect.name || 'Unnamed Effect'}</strong><br>
-                    <small>${effect.description}</small><br>
-                    <small>Type: ${effect.effectType ? effect.effectType.replace(/_/g, " ") : "No type"} | Trigger: ${effect.triggerCondition || 'Always'} | Chance: ${effect.triggerChance || 0}%</small>
+                    <small>${effect.description || ''}</small><br>
+                    <small>Type: ${effect.effectType ? effect.effectType.replace(/_/g, " ") : "No type"} | Trigger: ${effect.triggerCondition || 'Always'} | Chance: ${effect.triggerChance || 0}%</small><br>
+                    <small>Value: ${effect.value ?? effect.effectToApply?.value ?? ''} | Duration: ${effect.duration ?? ''}</small><br>
+                    <small>Last used: ${effect.lastUsed ? new Date(effect.lastUsed).toLocaleString() : 'Never'}</small>
                 </div>
             </li>
         `).join('');
@@ -447,7 +489,7 @@ class AdvancedGameWiki {
                     </li>
                     <li class="property-item">
                         <span class="property-label">Craft Time</span>
-                        <span class="property-value">${recipe.craftTime ? this.formatTime(recipe.craftTime) : ''}</span>
+                        <span class="property-value">${(recipe.craftingTime ?? recipe.craftTime) ? this.formatTime(recipe.craftingTime ?? recipe.craftTime) : ''}</span>
                     </li>
                 </ul>
                 <h4>Materials Required</h4>
@@ -517,12 +559,32 @@ class AdvancedGameWiki {
                         <span class="property-value">${item.enhancementLevel || 0}</span>
                     </li>
                     <li class="property-item">
+                        <span class="property-label">Tier</span>
+                        <span class="property-value">${item.tier ?? '—'}</span>
+                    </li>
+                    <li class="property-item">
+                        <span class="property-label">Owned By</span>
+                        <span class="property-value">${item.ownedBy ?? '—'}</span>
+                    </li>
+                    <li class="property-item">
+                        <span class="property-label">Upgrade Config</span>
+                        <span class="property-value">${item.upgradeConfig ? 'Yes' : 'No'}</span>
+                    </li>
+                    <li class="property-item">
+                        <span class="property-label">Purse Protection</span>
+                        <span class="property-value">${item.purseConfig?.protectionPercent ?? '—'}</span>
+                    </li>
+                    <li class="property-item">
                         <span class="property-label">Template</span>
                         <span class="property-value">${item.isTemplate ? 'Yes' : 'No'}</span>
                     </li>
                     <li class="property-item">
+                        <span class="property-label">Active</span>
+                        <span class="property-value">${item.isActive ? 'Yes' : 'No'}</span>
+                    </li>
+                    <li class="property-item">
                         <span class="property-label">Last Updated</span>
-                        <span class="property-value">${new Date(item.updatedAt).toLocaleString()}</span>
+                        <span class="property-value">${item.updatedAt ? new Date(item.updatedAt).toLocaleString() : '—'}</span>
                     </li>
                 </ul>
             </div>
@@ -625,7 +687,8 @@ class AdvancedGameWiki {
             const minLevel = minLevelEl && minLevelEl.value.trim() !== '' ? parseInt(minLevelEl.value): null ;
             const maxLevel = maxLevelEl && maxLevelEl.value.trim() !== '' ? parseInt(maxLevelEl.value): null;
 
-            const itemLevel = item.stats?.Level || 0;
+            // Prefer top-level item.level, fallback to stats.level
+            const itemLevel = (item.level ?? item.stats?.level ?? 0);
             
             if ((minLevel !== null && itemLevel < minLevel) || (maxLevel !== null && itemLevel > maxLevel)) {
                 return false;
@@ -738,7 +801,12 @@ class AdvancedGameWiki {
             return;
         }
 
-        grid.innerHTML = this.filteredItems.map(item => this.createItemCard(item)).join('');
+        try {
+            grid.innerHTML = this.filteredItems.map(item => this.createItemCard(item)).join('');
+        } catch (err) {
+            console.error('Error rendering items grid', err);
+            grid.innerHTML = '<p>Error rendering items. Check console for details.</p>';
+        }
     }
 
     createItemCard(item) {
@@ -748,9 +816,13 @@ class AdvancedGameWiki {
             .slice(0, 4)
             .map(([key, value]) => ({ label: this.formatStatName(key), value }));
 
+        const recipe = this.findRecipeForItem(item.itemId);
+        const craftTimeStr = recipe ? this.formatTime(recipe.craftingTime ?? recipe.craftTime ?? recipe.crafting_time ?? 0) : '';
+
         return `
             <div class="item-card" onclick="wiki.showItemModal('${item.itemId}')">
                 <div class="item-header rarity-${item.rarity}" >
+                    <div class="item-sprite"><img src="sprites/${item.cosmetic?.originalSprite?.icon || item.sprite?.icon || ''}" alt="" onerror="this.style.display='none'"></div>
                     <div class="item-title" >
                         <h3 class="item-name">${item.name}</h3>
                         <span class="item-rarity rarity-${item.rarity}">${item.rarity}</span>
@@ -760,7 +832,7 @@ class AdvancedGameWiki {
                     <p class="item-description">${item.description}</p>
                     <div class="item-stats">
                         <span class="stat-label">Required Level</span>
-                        <span class="stat-value">${item.requirements.level}</span>
+                        <span class="stat-value">${item.requirements?.level ?? '—'}</span>
                     </div>
                     <div class="item-stats">
                         <span class="stat-label">Type</span>
@@ -768,12 +840,14 @@ class AdvancedGameWiki {
                         <span class="stat-label">${item.subtype ? "Subtype" : ""}</span>
                         <span class="stat-value">${item.subtype ? item.subtype : ""}</span>   
                         <span class="stat-label">Stat Req</span>
-                        <span class="stat-value">Str: ${item.requirements.strength ? item.requirements.strength : "0"}</span>
+                        <span class="stat-value">Str: ${item.requirements?.strength ?? '0'}</span>
                         
-                        <span class="stat-value">Agi: ${item.requirements.agility ? item.requirements.agility : "0"}</span>
+                        <span class="stat-value">Agi: ${item.requirements?.agility ?? '0'}</span>
                         
-                        <span class="stat-value">Int: ${item.requirements.intelligence ? item.requirements.intelligence : "0"}</span>
+                        <span class="stat-value">Int: ${item.requirements?.intelligence ?? '0'}</span>
                         
+                        <!-- Recipe indicator -->
+                        <span class="stat-badge">${recipe ? `<span class="badge craftable">Craft: ${craftTimeStr || '—'}</span>` : ''}</span>
                     </div>
                 </div>
             </div>
@@ -1222,7 +1296,52 @@ class AdvancedGameWiki {
 
     // Helper to find a recipe for an item by itemId
     findRecipeForItem(itemId) {
-        return this.recipes.find(recipe => recipe.recipeId === itemId || recipe.itemId === itemId || recipe.name?.toLowerCase().replace(/ /g, '_') === itemId);
+        const normalize = s => String(s ?? '').toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
+        const want = normalize(itemId);
+        return this.recipes.find(recipe => {
+            if (!recipe) return false;
+            // Direct ids
+            if (normalize(recipe.recipeId) === want) return true;
+            if (normalize(recipe.itemId) === want) return true;
+            // Some recipes use a result object
+            if (recipe.result && normalize(recipe.result.itemId) === want) return true;
+            // Name-based match
+            if (normalize(recipe.name) === want) return true;
+            // fallback: check outputs by name or id fields
+            if (Array.isArray(recipe.items) && recipe.items.some(i => normalize(i.itemId) === want || normalize(i.name) === want)) return true;
+            return false;
+        });
+    }
+
+    _activateFocusTrap(modal) {
+        // Trap tab focus within the modal while it is open
+        // We add a keydown listener on document and remove it when the modal closes
+        this._focusTrapHandler = (e) => {
+            if (e.key !== 'Tab') return;
+            const focusableSelectors = 'a[href], area[href], input:not([disabled]):not([type=hidden]), select:not([disabled]), textarea:not([disabled]), button:not([disabled]), [tabindex]:not([tabindex="-1"])';
+            const allFocusable = Array.from(modal.querySelectorAll(focusableSelectors)).filter(el => el.offsetParent !== null);
+            if (allFocusable.length === 0) {
+                e.preventDefault();
+                return;
+            }
+
+            const first = allFocusable[0];
+            const last = allFocusable[allFocusable.length - 1];
+
+            if (e.shiftKey) { // Shift + Tab
+                if (document.activeElement === first || document.activeElement === modal) {
+                    e.preventDefault();
+                    last.focus();
+                }
+            } else { // Tab
+                if (document.activeElement === last) {
+                    e.preventDefault();
+                    first.focus();
+                }
+            }
+        };
+
+        document.addEventListener('keydown', this._focusTrapHandler);
     }
 
     showLoading() {
@@ -1243,6 +1362,27 @@ class AdvancedGameWiki {
         const modal = document.getElementById('item-modal');
         if (modal) {
             modal.classList.add('hidden');
+            // restore scroll
+            document.body.classList.remove('modal-open');
+            modal.setAttribute('aria-hidden', 'true');
+
+            // Remove focus trap handler
+            if (this._focusTrapHandler) {
+                document.removeEventListener('keydown', this._focusTrapHandler);
+                this._focusTrapHandler = null;
+            }
+
+            // Remove the click handler attached to modal
+            if (this._modalClickHandler) {
+                modal.removeEventListener('click', this._modalClickHandler);
+                this._modalClickHandler = null;
+            }
+
+            // Restore focus to the last focused element
+            if (this._lastFocusedElement && typeof this._lastFocusedElement.focus === 'function') {
+                try { this._lastFocusedElement.focus(); } catch (e) { /* ignore */ }
+            }
+            this._lastFocusedElement = null;
         }
     }
 }

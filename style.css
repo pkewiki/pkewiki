@@ -322,6 +322,12 @@ body {
   padding: 0;
 }
 
+/* Prevent background scroll when modal is open */
+body.modal-open {
+  overflow: hidden;
+  height: 100%;
+}
+
 *,
 *::before,
 *::after {
@@ -1635,13 +1641,14 @@ body {
 }
 
 .modal-overlay {
-  position: absolute;
+  position: fixed;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
   background-color: rgba(0, 0, 0, 0.5);
   backdrop-filter: blur(4px);
+  z-index: 1000;
 }
 
 .modal-content {

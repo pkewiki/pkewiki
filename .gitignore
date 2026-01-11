@@ -1,0 +1,6 @@
+# Ignore local test and validation scripts (not required on the deployed site)
+/scripts/
+
+# Common ignores
+.DS_Store
+Thumbs.db

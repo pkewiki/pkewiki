@@ -217,9 +217,9 @@
     </main>
 
     <!-- Item Detail Modal -->
-    <div id="item-modal" class="modal hidden">
+    <div id="item-modal" class="modal hidden" aria-hidden="true">
       <div class="modal-overlay"></div>
-      <div class="modal-content">
+      <div class="modal-content" role="dialog" aria-modal="true" aria-labelledby="modal-title" tabindex="-1">
         <div class="modal-header">
           <h2 id="modal-title">Item Details</h2>
           <button class="modal-close" id="modal-close">&times;</button>
